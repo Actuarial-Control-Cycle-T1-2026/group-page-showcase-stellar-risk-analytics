@@ -1,5 +1,25 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/FxAEmrI0)
 # Risk Stellar Analytics SOA Report
+## Table of Contents
+
+- [1.0 Executive Summary](#10-executive-summary)
+- [2.0 Product Design](#20-product-design)
+  - [2.1 Equipment Failure](#21-equipment-failure)
+  - [2.2 Workers Compensation](#22-workers-compensation)
+  - [2.3 Business Interruption](#23-business-interruption)
+  - [2.4 Cargo Loss](#24-cargo-loss)
+- [3.0 Capital Modelling & Pricing](#30-capital-modelling--pricing)
+  - [3.1 Equipment Failure](#31-equipment-failure)
+  - [3.2 Workers Compensation](#32-workers-compensation)
+  - [3.3 Business Interruption](#33-business-interruption)
+  - [3.4 Cargo Loss](#34-cargo-loss)
+- [4.0 Risk Assessment](#40-risk-assessment)
+  - [4.1 Equipment Failure](#41-equipment-failure)
+  - [4.2 Workers Compensation](#42-workers-compensation)
+  - [4.3 Business Interruption](#43-business-interruption)
+  - [4.4 Cargo Loss](#44-cargo-loss)
+- [5.0 Assumptions](#50-assumptions)
+- [6.0 Data and Data Limitations](#60-data-and-data-limitations)
 
 # 1.0	EXECUTIVE SUMMARY
 Stellar Risk Analytics recommends the following comprehensive products for Cosmic Quarry Mining Corporation’s (CQMC) equipment failure, workers compensation, business interruption and cargo loss hazards. The analysis is based on the operational characteristics of the Helionis Cluster, Bayesia System and Oryn Delta solar systems and performed on a 100,000 monte carlo simulation across all operational sectors.
@@ -304,16 +324,11 @@ Coefficient of Variation (CV)
 99.5% VaR
 19,621,183,926
 146,613,128,641
-
-Table 6: Aggregate Loss Statistics in Currency (Đ).
+Table 6: Aggregate Loss Statistics in Currency
 The short-term results show relatively high volatility, with a CV of 19.8%, and a clear gap between the mean and the 99.5% VaR, indicating a significant risk of extreme losses. In the long term, volatility decreases to a 6.4% CV due to diversification and discounting, although the gap between average and extreme outcomes remains. 
 The larger scale of losses compared to other hazard classes is consistent with the underlying data, where Business Interruption claims are significantly higher in value. These results imply that capital requirements are driven primarily by tail risk rather than average losses, requiring pricing and capital buffers to be calibrated to extreme but plausible disruption scenarios.
-Scenario
-99.5% VaR
-% increase from baseline
-Baseline
-21,291,237,176
--
+
+
 +50% Frequency
 32,065,219,031
 50.6%
