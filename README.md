@@ -1,19 +1,21 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/FxAEmrI0)
 # Risk Stellar Analytics SOA Report
 
-1.0	EXECUTIVE SUMMARY
+## 1.0	EXECUTIVE SUMMARY
 Stellar Risk Analytics recommends the following comprehensive products for Cosmic Quarry Mining Corporation’s (CQMC) equipment failure, workers compensation, business interruption and cargo loss hazards. The analysis is based on the operational characteristics of the Helionis Cluster, Bayesia System and Oryn Delta solar systems and performed on a 100,000 monte carlo simulation across all operational sectors.
 The equipment failure product is structured as a tail risk solution, covering low-frequency, high-severity losses while high deductibles ensure routine losses are retained by the insured. Pricing is risk-differentiated based on equipment characteristics and location, aligning premiums with underlying risk while incentivising effective maintenance and risk management.
 From the workers compensation perspective, out of our analysis of 35,809 employees, we expect 508 annual claims with an expected loss of 82,587 credits and 92,069 credits at 99.5% value at risk (VaR). Adding a 25% loading for profit and expenses, a recommended annual premium of 2.89 credits per worker is calculated. The total annual premium sums to 103,234 credits.
 The business interruption product adopts a three-tier structure with parametric downtime triggers. Pricing is risk-differentiated based on key operational drivers, ensuring alignment with expected losses across tiers. Portfolio risk is managed through a $2B annual aggregate deductible and $15B xs $6B reinsurance, reducing tail risk and limiting the probability of an unprofitable year to approximately 0.1%.
 The cargo loss product is structured as an indemnity-based cover, focusing on low-frequency, high-severity losses driven by a highly skewed claims profile. A deductible is applied to ensure coverage is targeted towards material losses. The pricing of the product is risk-differentiated based on key drivers such as route risk  and cargo type while portfolio risk is managed through capital buffers informed by tail risk measures, ensuring resilience against extreme loss events.
 Cosmic Quarry can integrate these products into its ERM framework by mapping each policy to a specific risk category and embedding them within its risk appetite. For example, high-frequency losses are retained through deductibles, while low-frequency, high-severity risks are transferred via insurance. The outputs from our pricing and capital modelling can be used to set capital buffers, define risk limits, and inform stress testing for system-wide events such as solar storms. This ensures insurance is used strategically alongside operational controls to manage downside risk and ensure financial stability for CQMC.
-2.0	PRODUCT DESIGN
-2.1	Equipment Failure
+
+## 2.0	PRODUCT DESIGN
+# 2.1	Equipment Failure
 The equipment failure product covers damages to the following types of equipment: Quantum Bore, Graviton Extractor, FluxStream Carrier, Mag-Lift Aggregator, Fusion Transport and Ion Pulverizer.
 The deductible will be specific to each solar system and is determined at the flattening point of the Loss Elimination Ratio analysis (Appendix Fig 1), where further increases in the deductible yield a negligible reduction in expected loss eliminated. A deductible of $200,000 will be applied for equipment failure that occurs in the Helionis Cluster and Bayesia Systems and a deductible of $250,000 applies for equipment failure in Oryn Delta. At these levels of deductibles, the equipment failure product acts as a tail risk product in which the deductible eliminates 97-98% of the expected losses and limits exposure to the most severe claims as seen in the Appendix Fig 3. 
 In the Helionis Cluster and Bayesia System, equipment failure coverage is conditional on the maintenance interval being less than 1200 hours as the solar system has the largest exposure of older equipment. This trigger encourages maintenance and age related failures. In the Oryn Delta, equipment failure coverage is conditional on usage intensity being less than 18 hours day to mitigate its elevated risk index on all equipment despite having the lowest aged equipment and most frequent maintenance intervals. In terms of scalability and adaptability, the threshold values for the coverage triggers can be adjusted annually based on updated frequency and severity models. All equipment that does not adhere to the coverage triggers are excluded.
-2.2	Workers Compensation
+
+# 2.2	Workers Compensation
 The workers compensation product is tailored towards the unique resources and environments of each solar system. The base package includes (for all solar systems):
 Medical coverage of a maximum of 250,00 credits per claim
 Temporary total disability value at ⅔ of base salary with a 7-day waiting period.
@@ -29,7 +31,8 @@ Continuous trigger: covers psychological injuries and cumulative musculoskeletal
 This trigger is especially relevant to the Helionis Cluster and Zeta for their cumulative strain and psychological claims from isolation characteristics respectively.
 The following exclusions apply to all solar systems to manage moral hazard and maintain good risk management. Purposeful self injury, injury while under the influence of prohibited substances, war or combat risks, unauthorised space walks. 
 Finally, Stellar Risk Analytics recommends implementing extra features in the form of deductibles to remain competitive. Epsilon, with the lowest claim frequency, will have no deductibles to keep its premium competitive. The systems with higher claim frequencies, Helionis cluster and Zeta, both have a 10,000 credit deductible 
-2.3	Business Interruption
+
+# 2.3	Business Interruption
 a. Benefit structures
 The Business interruption product offers three core tiers, which are Basic, Standard, and Comprehensive, alongside an optional catastrophe layer. Coverage is structured around parametric triggers based on operational downtime, eliminating the need for physical loss verification across solar systems.
 Feature
@@ -158,8 +161,10 @@ As with previous computations, 100,000 Monte Carlo Simulations were employed to 
 Using standard actuarial pricing formula with profit margin (m) of 10% and expense ratio (e) of 15%:
 
 and the expected annual loss under the one-year simulation, the indicated annual portfolio premium amounts to approximately 363.523 billion. It is also crucial to note that premiums and deductibles can be adjusted based on specific solar systems or cargos. For example, the coefficient for solar radiation in the Poisson GLM model was 0.52 which equates to e^(0.52 )=1.68 under a log-link. Hence solar systems such a Bayesia and Epsilon could justify higher severity loadings of up to 70% in premiums. Moreover, the coefficient for gold in the severity GLM was approximately 3.75, implying that cargos carrying precious metals and more expensive commodities could also be charged higher premiums or greater deductibles.
-3.0	CAPITAL MODELLING & PRICING
-3.1 Equipment Failure
+
+
+## 3.0	CAPITAL MODELLING & PRICING
+# 3.1 Equipment Failure
 Aggregate losses for equipment failure were calculated in which claim frequency was modelled using a Poisson distribution (λ=1182.2) and the severity of claims was modelled using a Lognormal distribution  (𝜇 =10.961 , 𝜎 = 0.494). A Monte-Carlo simulation with 100,000 iterations was used to generate short and long term aggregate loss distributions.
 Statistic
 Short term (1 Year)
@@ -208,7 +213,8 @@ Frequency & Severity (+200% each)
 Table 2: Stress Testing Statistics in Currency (Đ).
 The stress testing results demonstrate the sensitivity of aggregate losses to changes in both claim frequency and severity in a 1-in-100 year event in which the baseline level of $94.3m indicates limited tail risk under current assumptions. A 50% increase in frequency or severity individually raises the 99% VaR to approximately $139–141m, showing that both drivers have a similar impact on tail losses, with severity contributing marginally more to extreme outcomes. Under the combined stress (+50% frequency and severity), the 99% VaR increases sharply to $209.2m, more than doubling the baseline. This highlights a compounding effect, where simultaneous deterioration in both drivers materially amplifies tail risk. Overall, the results demonstrate that while baseline risk is well-contained, the portfolio is highly sensitive to joint increases in frequency and severity, with significant implications for capital requirements under adverse conditions.
 As seen in Appendix Figure 3, the equipment loss portfolio is profitable in the short term but deteriorates over time. In year 1, the mean net revenue is $4.4m with only a 7% probability of loss, indicating adequate pricing. By year 5, profit falls to $2.3m and the probability of loss rises to 37%, and by year 10 the portfolio is loss-making on average (−$39.8m) with persistent downside risk. Tail metrics also worsen, reflecting the compounding impact of volatility over longer horizons. The results highlight that without repricing or additional margins, this approach may not be sufficient to sustain profitability over longer horizons.
-3.2 Workers Compensation
+
+# 3.2 Workers Compensation
 Aggregate losses for workers compensation were derived from a frequency-severity framework from 134,947 worker years of exposure. Monte Carlo simulations with 100,000 iterations were utilised to generate both short and long term (1 & 10 year PV) aggregate loss distributions. The frequency was modelled using Poisson distribution (λ=508.2) and severity modelled with log normal (𝜇 = 5.132, 𝜎 = 0.114). The aggregated results are summarised in the following table.
 Statistic
 Short term (1-year)
@@ -273,7 +279,8 @@ Table 5: Net revenue, VaR & TVaR Summary (in credits)
 In a single year, the expected revenue is positive (20,647) and the 99% VaR is 12,080 credits.
 In a 10 year horizon, the expected net revenue is negative (82,731) and the 99% VaR is 88,259 credits.
 These results indicate short term net revenue is positive and long term net revenue is negative under current inflation and discount rates. This suggests a new pricing or investment strategy is needed.
-3.3 Business Interruption
+
+# 3.3 Business Interruption
 Aggregate losses for Business Interruption were modelled using a frequency–severity framework. Claim frequency was estimated using a Negative Binomial GLM and exposure offset, with predictors selected via a stepwise procedure based on AIC. Claim severity was modelled using a Gamma GLM to reflect the right-skewed nature of claim amounts. Model selection across alternative specifications was based on AIC comparisons. Monte Carlo simulation (100,000 iterations) was used to generate short-term (1-year) and long-term (10-year present value) aggregate loss distributions at the policy level.
 Statistic
 Short term (1 Year)
@@ -321,7 +328,7 @@ Frequency & Severity (+200% each)
 
 Table 7: Stress Testing Statistics in Currency (Đ).
 The stress testing results highlight the portfolio’s strong sensitivity to changes in both claim frequency and severity. A 50% increase in either frequency or severity leads to a sizable rise in tail losses (approximately 45–51%), indicating that each driver independently contributes to risk. When both frequency and severity increase simultaneously by 50% each, we see losses more than double, at 119.4%, demonstrating a clear compounding effect. It can be seen from the non linear behaviour that aggregate risk is highly sensitive to joint deterioration rather than isolated shocks, highlighting significant exposure to correlated, system-wide disruption events. In the most extreme conditions (+200% in both drivers), losses increase dramatically by over 800%, highlighting significant exposure to severe tail events and the need for robust capital buffers against catastrophic scenarios. This highlights the importance of considering correlated shocks in capital modelling and pricing.
-3.4 Cargo Loss
+# 3.4 Cargo Loss
 Capital modelling for cargo loss highlights the amount of risk capital which should be held by Galaxy General Insurance to cover potential losses through claims relating to cargo loss or damage. Two formulas were employed to approximate capital requirements in both short and long-term cases:
 Capital=TVaR99​−E[L] and Capital=VaR99​−E[L].
 Using the mean loss computed in the 1 and 5 year simulations as an estimation for expected loss as well as the TVaR and VaR figures, the short and long term capital requirements were calculated and displayed in the table below.
@@ -337,8 +344,8 @@ TVaR (5 years)
 207 billion
 
 Though both formulas are valid, it is recommended that Galaxy General Insurance uses the TVaR-based figures as these more accurately represent tail risk beyond the 99th percentile. This is because VaR figures only highlight the cutoff loss at a specific threshold rather than considering the severity of losses beyond this point. Conversely, TVaR captures the average value of losses beyond this point which is more suitable for heavily tailed data like the Cargo Loss Claims Severity as it provides a stronger indication of extreme tail risk. This more closely aligns with the goal of capital modelling which is to act as a buffer against extreme losses which cannot be funded by premiums alone. 
-4.0	RISK ASSESSMENT
-4.1 Equipment Failure
+## 4.0	RISK ASSESSMENT
+# 4.1 Equipment Failure
 Risk
 Helionis Cluster
 Bayesia System (Epsilon)
@@ -362,7 +369,7 @@ Average Risk Index
 
 The Helionis Cluster has the lowest average risk index, yet produces the highest total loss, indicating that risk is driven by scale and ageing Flux Rider equipment (10–14 years) rather than inherent per-unit hazard. The Bayesia System shows a similar loss profile but a higher risk index, suggesting that harsher environmental conditions amplify the risk of the same ageing equipment. In contrast, the Oryn Delta has the lowest total loss but the highest risk index, implying that while exposure is smaller, per-unit risk is greatest due to a more volatile environment, which outweighs the benefits of its younger asset base.
 As seen in the threat table (Appendix Figure 5), the most severe scenario is the extreme correlated shock, where both frequency and severity increase by 200%, resulting in a 291% increase in the 99% VaR (Figure 5). This highlights the portfolio’s vulnerability to extreme, system-wide events, where simultaneous deterioration in both drivers leads to a compounding effect on tail risk. A more moderate system-wide disruption, such as a solar storm increasing both frequency and severity by 50%, still produces a substantial 121% increase in VaR. This reflects the portfolio’s sensitivity to common-cause shocks, particularly given the concentration of exposure across Helionis, Bayesia, and Oryn Delta. At the equipment level, Flux Riders represent a key vulnerability. Another correlated scenario is a equipment specific defect in which an increase in severity by 50% leads to a 50% increase in VaR. Similarly, a 50% increase in frequency results in a 47.8% increase in VaR compared to baseline levels (Figure 5). 
-4.2 Workers Compensation
+# 4.2 Workers Compensation
 Workers compensation claims are resulted from the interaction between occupational hazards, environmental conditions and workforce demographics. Out of all 35,809 employees, only 1,889 workers made 1 or more claims. With the historical data amongst the employees the following risk profile is generated. 
 Risk
 Helionis Cluster
@@ -409,7 +416,8 @@ Catastrophic case
 141,441
 
 Based on aggregating all historical data across the 3 solar systems, the top 5 injuries by risk score were derived (table in appendix). Across the solar systems, cut lacerations and strains are the most dominant injuries suggesting more emphasis on employees safety equipment and posture should be in place for prevention.
-4.3 Business Interruption
+
+# 4.3 Business Interruption
 Risk
 Helionis Cluster 
 Epsilon
@@ -456,7 +464,7 @@ Moderate
 
 Table 8: Threat table in descending order.
 Business interruption risk is dominated by correlated shocks, with joint increases in frequency and severity driving extreme tail losses. Supply chain dependence is the strongest individual driver, while systemic risks outweigh individual factors overall.
-4.4 Cargo Loss
+# 4.4 Cargo Loss
 Scenario
 Mean Loss
 Standard Deviation
@@ -501,13 +509,14 @@ Frequency & Severity (+200%)
 710.31%
 
 The above results illustrate the substantial sensitivity of portfolio risk with respect to both claim frequency and severity. Whilst it can be observed that 50% increase in frequency or severity contributed to moderate increases of between 40% and 50% in VaR and TVaR figures, the combined effect of a 50% increase in both drivers leads to a highly non-linear impact with both risk measures more than doubling in size. This disproportional tail risk is further demonstrated in the extreme scenario of a 200% increase in both frequency and severity which precipitates an increase of over 700% in both risk measures. This substantial exposure in stress scenarios is indicative of strong tail dependence, emphasising the need for robust capital buffers and reinsurance structures to manage extreme downside risk.
-5.0	ASSUMPTIONS
+## 5.0	ASSUMPTIONS
 The historical data did not have any claims that occurred in the Bayesia System and Oryn Delta. Thus during capital modelling and price we assume the claim frequency and severity of Epsilon as a basis for the Bayesia system. This is because both solar systems are described as having high radiation, harsh environments, and challenging conditions for operations. 
 Similarly, we assume the claim frequency and severity of Zeta as a basis for Oryn Delta. This is because solar systems have navigational hazards due to asteroid belts and chaotic orbits, with moderate flare activity.
 The 14 years of historical data (2160–2174) are used to compute the average annual inflation rate and average spot rates for 1‑year and 10‑year maturities. These averages are assumed to be the most reasonable point estimates for future rates over the projection horizon. The average inflation rate was 2.4653%, average 1-year spot rate was 1.79 % and average 10-year spot rate 2.896 %.
 Policies are assumed to be independent under normal conditions. The business interruption modelling introduced a dependence through multiplicative lognormal shocks to capture systematic risk, but idiosyncratic risk is not modelled.
 Frequency–severity independence is assumed with no explicit dependence beyond shared covariates.
-6.0	DATA AND DATA LIMITATIONS
+
+## 6.0	DATA AND DATA LIMITATIONS
 To ensure data integrity and consistency while preserving maximum information, we implemented a standardised 2-stage cleaning process. First, outliers using the interquartile range (IQR) method in each data set were first found. Values falling outside the outlier bounds were removed to prevent distortion. Then any values remaining within the bounds were clipped to the nearest bound (either the maximum or minimum of the given ranges). This method balances data quality with retention. The analysis also uses a Monte Carlo simulation with 100,000 iterations. The following were also assumed as part of the project:
 From the total number of claims, 14.59% of the frequency data and a third of the severity data were outliers according to the IQR method.
 No variables had partial-year exposure. Full-year exposure for all workers is assumed.
