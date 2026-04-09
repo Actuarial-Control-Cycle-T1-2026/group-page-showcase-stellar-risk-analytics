@@ -1,0 +1,932 @@
+---
+title: "ACTL4001 Equipment Failure"
+output: html_document
+date: "2026-03-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+Frequency <- read_excel("Frequency.xlsx")
+View(Frequency)
+library(readxl)
+Severity <- read_excel("Severity.xlsx")
+View(Severity)
+
+# Determining appropriate frequency model - Poisson was chosen
+mean_freq <- mean(Frequency$claim_count, na.rm = TRUE)
+var_freq  <- var(Frequency$claim_count, na.rm = TRUE)
+
+mean_freq
+var_freq
+library(MASS)
+
+# Poisson model
+pois_model <- glm(claim_count ~ 1, family = poisson, data = Frequency)
+
+# Negative Binomial model
+nb_model <- glm.nb(claim_count ~ 1, data = Frequency)
+AIC(pois_model, nb_model)
+dispersion <- sum(residuals(pois_model, type = "pearson")^2) / pois_model$df.residual
+dispersion
+
+# Determining appropriate severity model - Log-normal was chosen
+
+hist(Severity$claim_amount, breaks = 50)
+hist(log(Severity$claim_amount), breaks = 50)
+
+# Add age bands to frequency and severity
+# Assuming Frequency and Severity are already loaded
+library(dplyr)
+
+Frequency <- Frequency %>%
+  mutate(age_band_cat = case_when(
+    equipment_age < 5  ~ "0-4",
+    equipment_age < 10 ~ "5-9",
+    equipment_age >= 10 ~ "10+"
+  ))
+
+Severity <- Severity %>%
+  mutate(age_band_cat = case_when(
+    equipment_age < 5  ~ "0-4",
+    equipment_age < 10 ~ "5-9",
+    equipment_age >= 10 ~ "10+"
+  ))
+
+library(dplyr)
+library(stringr)
+
+Frequency <- Frequency %>%
+  mutate(equipment_type2 = str_remove(equipment_type, "_.*$"))
+
+Severity <- Severity %>%
+  mutate(equipment_type2 = str_remove(equipment_type, "_.*$"))
+
+# Clean solar system
+Frequency <- Frequency %>%
+  mutate(solar_system2 = str_remove(solar_system, "_.*$"))
+
+Severity <- Severity %>%
+  mutate(solar_system2 = str_remove(solar_system, "_.*$"))
+```
+
+
+```{r cars}
+### Aggregate Loss Modelling
+## Upload equipment data
+library(dplyr)
+library(tidyr)
+
+equipment_types <- c("Quantum Bore", "Graviton Extractor", "FexStram Carrier", 
+                     "ReglAggregators", "Flux Rider", "Ion Pulverizer")
+solar_systems <- c("Helionis Cluster", "Bayesian System", "Oryn Delta")
+age_bands <- c("<5", "5-9", "10-14", "15-19", "20+")
+
+helionis <- data.frame(
+  equipment = equipment_types,
+  `<5` = c(30, 24, 15, 30, 150, 9),
+  `5-9` = c(45, 36, 23, 45, 225, 14),
+  `10-14` = c(180, 144, 89, 180, 900, 53),
+  `15-19` = c(30, 24, 15, 30, 150, 9),
+  `20+` = c(15, 12, 8, 15, 75, 5)
+) %>% mutate(solar_system = "Helionis Cluster")
+
+bayesia <- data.frame(
+  equipment = equipment_types,
+  `<5` = c(45, 36, 23, 45, 225, 14),
+  `5-9` = c(38, 30, 19, 38, 187, 11),
+  `10-14` = c(59, 48, 29, 59, 300, 18),
+  `15-19` = c(8, 6, 4, 8, 38, 2),
+  `20+` = c(0, 0, 0, 0, 0, 0)
+) %>% mutate(solar_system = "Bayesian System")
+
+oryn <- data.frame(
+  equipment = equipment_types,
+  `<5` = c(75, 60, 37, 75, 375, 22),
+  `5-9` = c(15, 12, 8, 15, 75, 5),
+  `10-14` = c(10, 8, 5, 10, 50, 3),
+  `15-19` = c(0, 0, 0, 0, 0, 0),
+  `20+` = c(0, 0, 0, 0, 0, 0)
+) %>% mutate(solar_system = "Oryn Delta")
+
+counts_long <- bind_rows(helionis, bayesia, oryn) %>%
+  pivot_longer(cols = -c(equipment, solar_system),
+               names_to = "age_band",
+               values_to = "count") %>%
+  mutate(age_band = case_when(
+    age_band == "X.5"   ~ "<5",
+    age_band == "X5.9"  ~ "5-9",
+    age_band == "X10.14" ~ "10-14",
+    age_band == "X15.19" ~ "15-19",
+    age_band == "X20."   ~ "20+",
+    age_band == "X20"    ~ "20+",
+    TRUE ~ age_band
+  ))
+
+op_pct <- data.frame(
+  equipment = equipment_types,
+  Helionis.Cluster = c(0.95, 0.95, 0.90, 0.80, 0.80, 0.50),
+  Bayesian.System = c(0.80, 0.80, 0.75, 0.75, 0.80, 0.60),
+  Oryn.Delta = c(0.75, 0.75, 0.70, 0.70, 0.75, 0.50)
+) %>% pivot_longer(cols = -equipment,
+                   names_to = "solar_system",
+                   values_to = "op_pct")
+
+maint <- data.frame(
+  equipment = equipment_types,
+  Helionis.Cluster = c(750, 750, 375, 1500, 1500, 1000),
+  Bayesian.System = c(600, 600, 400, 1000, 1000, 750),
+  Oryn.Delta = c(500, 500, 250, 300, 300, 500)
+) %>% pivot_longer(cols = -equipment,
+                   names_to = "solar_system",
+                   values_to = "maintenance_int")
+
+op_pct$solar_system <- recode(op_pct$solar_system,
+                               Helionis.Cluster = "Helionis Cluster",
+                               Bayesian.System = "Bayesian System",
+                               Oryn.Delta = "Oryn Delta")
+maint$solar_system <- recode(maint$solar_system,
+                              Helionis.Cluster = "Helionis Cluster",
+                              Bayesian.System = "Bayesian System",
+                              Oryn.Delta = "Oryn Delta")
+
+exposure_df <- counts_long %>%
+  left_join(op_pct, by = c("equipment", "solar_system")) %>%
+  left_join(maint, by = c("equipment", "solar_system")) %>%
+  mutate(
+    exposure = count * op_pct,
+    usage_int = op_pct * 24,
+    age_band_cat = case_when(
+      age_band %in% c("<5")                ~ "0-4",
+      age_band %in% c("5-9")               ~ "5-9",
+      age_band %in% c("10-14", "15-19", "20+") ~ "10+"
+    )
+  ) %>%
+  filter(count > 0) %>%
+  rename(equipment_type2 = equipment,
+         solar_system2 = solar_system)
+
+head(exposure_df)
+View(exposure_df)
+```
+
+
+```{r pressure, echo=FALSE}
+# Frequency + Severity Models
+# Frequency model (Poisson with offset)
+freq_glm <- glm(claim_count ~ equipment_type2 + age_band_cat + solar_system2 + 
+                usage_int + maintenance_int + offset(log(exposure)),
+                family = poisson, data = Frequency)
+
+# Check for overdispersion
+summary(freq_glm)
+
+# Severity model (log‑normal via linear regression on log(amount))
+sev_lm <- lm(log(claim_amount) ~ equipment_type2 + age_band_cat + solar_system2 +
+               usage_int + maintenance_int, data = Severity)
+summary(sev_lm)
+sdlog <- sigma(sev_lm)# constant standard deviation
+show(sdlog)
+```
+```{r}
+# --- 1. Recode solar systems to match model levels ---
+exposure_df <- exposure_df %>%
+  mutate(
+    solar_system2 = recode(solar_system2,
+                           "Bayesian System" = "Epsilon",
+                           "Oryn Delta" = "Zeta")
+  )
+
+# --- 2. Ensure factor levels match the model's training levels ---
+ss_levels <- freq_glm$xlevels[["solar_system2"]]
+exposure_df$solar_system2 <- factor(exposure_df$solar_system2, levels = ss_levels)
+
+eq_levels <- freq_glm$xlevels[["equipment_type2"]]
+exposure_df$equipment_type2 <- factor(exposure_df$equipment_type2, levels = eq_levels)
+
+# --- 3. Predict frequency, severity parameters, and total expected claims ---
+exposure_df$lambda <- predict(freq_glm, newdata = exposure_df, type = "response")
+exposure_df$meanlog <- predict(sev_lm, newdata = exposure_df)
+exposure_df$sdlog <- sdlog   # constant from severity model
+
+total_expected <- sum(exposure_df$lambda)               # expected total claims
+exposure_df$prob <- exposure_df$lambda / total_expected # cell probability
+
+# --- 4. Simulation ---
+n_sim <- 0000
+agg_loss <- numeric(n_sim)
+set.seed(123)
+pb <- txtProgressBar(min = 0, max = n_sim, style = 3)
+for (i in 1:n_sim) {
+  N <- rpois(1, total_expected)
+  if (N == 0) {
+    agg_loss[i] <- 0
+  } else {
+    cells <- sample(1:nrow(exposure_df), size = N, replace = TRUE, prob = exposure_df$prob)
+    sev <- rlnorm(N, meanlog = exposure_df$meanlog[cells], sdlog = sdlog)
+    agg_loss[i] <- sum(sev)
+  }
+}
+  if (i %% 100 == 0) setTxtProgressBar(pb, i)
+
+close(pb)
+# --- 5. Summary statistics ---
+mean_loss <- mean(agg_loss)
+sd_loss <- sd(agg_loss)
+quantiles <- quantile(agg_loss, probs = c(0.95, 0.99, 0.995, 0.999))
+tvar_99 <- mean(agg_loss[agg_loss > quantile(agg_loss, 0.99)])
+
+cat("Mean aggregate loss: ", mean_loss, "\n")
+cat("Standard deviation:  ", sd_loss, "\n")
+cat("95% VaR:             ", quantiles[1], "\n")
+cat("99% VaR:             ", quantiles[2], "\n")
+cat("99.5% VaR:           ", quantiles[3], "\n")
+cat("99.9% VaR:           ", quantiles[4], "\n")
+cat("TVaR (99%):          ", tvar_99, "\n")
+```
+
+```{r}
+## Inflation and spot rate data
+# ---- Economic data and averages ----
+economic_data <- data.frame(
+  Year = 2160:2174,
+  Inflation = c(3.77, 2.32, 1.48, 1.08, 0.22, 0.71, 1.55, 2.16, 1.81, 0.73, 2.94, 7.08, 5.98, 2.76, 2.39),
+  Rate1Y = c(0.24, 0.24, 0.19, 0.17, 0.40, 0.72, 1.42, 2.18, 2.30, 0.43, 0.15, 2.94, 5.45, 5.28, 4.74),
+  Rate10Y = c(3.11, 2.08, 2.73, 2.87, 2.43, 2.09, 2.70, 3.26, 2.40, 0.95, 1.50, 3.09, 4.33, 4.80, 5.10)
+)
+
+avg_inflation <- mean(economic_data$Inflation) / 100
+avg_rate1Y <- mean(economic_data$Rate1Y) / 100
+avg_rate10Y <- mean(economic_data$Rate10Y) / 100
+
+# Interpolate spot rates for years 1 to 10
+max_year <- 10
+spot_rates <- numeric(max_year)
+for (t in 1:max_year) {
+  if (t == 1) {
+    spot_rates[t] <- avg_rate1Y
+  } else if (t >= max_year) {
+    spot_rates[t] <- avg_rate10Y
+  } else {
+    r1 <- log(1 + avg_rate1Y)
+    r10 <- log(1 + avg_rate10Y)
+    r <- r1 + (r10 - r1) * (t - 1) / (max_year - 1)
+    spot_rates[t] <- exp(r) - 1
+  }
+}
+
+# ---- 1‑year simulation (assuming you already have agg_loss) ----
+# agg_loss is from earlier simulation (undiscounted, base year dollars)
+# Inflate and discount
+pv_agg_loss_1y <- agg_loss * (1 + avg_inflation) / (1 + spot_rates[1])
+
+# Premium (VaR₉₅ of undiscounted losses)
+premium_annual <- quantile(agg_loss, 0.95)
+pv_premium_1y <- premium_annual
+net_revenue_1y <- pv_premium_1y - pv_agg_loss_1y
+
+# ---- Multi‑year simulation (e.g., 5 years) ----
+T <- 5
+n_sim <- 100000
+set.seed(123)
+
+pv_loss_5y <- numeric(n_sim)
+for (i in 1:n_sim) {
+  total_pv <- 0
+  for (t in 1:T) {
+    N <- rpois(1, total_expected)
+    if (N > 0) {
+      cells <- sample(1:nrow(exposure_df), size = N, replace = TRUE, prob = exposure_df$prob)
+      sev <- rlnorm(N, meanlog = exposure_df$meanlog[cells], sdlog = sdlog)
+      sev <- sev * (1 + avg_inflation)^t
+      disc <- 1 / (1 + spot_rates[t])^t
+      total_pv <- total_pv + sum(sev * disc)
+    }
+  }
+  pv_loss_5y[i] <- total_pv
+}
+
+# Present value of premium stream for 5 years
+pv_premium_5y <- sum(premium_annual / (1 + spot_rates[0:(T-1)])^(0:(T-1)))
+net_revenue_5y <- pv_premium_5y - pv_loss_5y
+
+# ---- Summary statistics ----
+# 1-year
+mean_loss_1y <- mean(agg_loss)
+sd_loss_1y <- sd(agg_loss)
+quantiles_loss_1y <- quantile(agg_loss, c(0.95, 0.99, 0.995, 0.999))
+tvar_99_loss_1y <- mean(agg_loss[agg_loss > quantile(agg_loss, 0.99)])
+
+mean_nr_1y <- mean(net_revenue_1y)
+sd_nr_1y <- sd(net_revenue_1y)
+prob_neg_nr_1y <- mean(net_revenue_1y < 0)
+
+# 5-year
+mean_loss_5y <- mean(pv_loss_5y)
+sd_loss_5y <- sd(pv_loss_5y)
+quantiles_loss_5y <- quantile(pv_loss_5y, c(0.95, 0.99, 0.995, 0.999))
+tvar_99_loss_5y <- mean(pv_loss_5y[pv_loss_5y > quantile(pv_loss_5y, 0.99)])
+
+mean_nr_5y <- mean(net_revenue_5y)
+sd_nr_5y <- sd(net_revenue_5y)
+prob_neg_nr_5y <- mean(net_revenue_5y < 0)
+
+# Print or store in a data frame for reporting
+# ============================================================================
+# Function to compute summary statistics for a vector of values
+# ============================================================================
+summarize_vec <- function(x, prefix = "Loss", probs = c(0.95, 0.99, 0.995, 0.999), var_prob = 0.99) {
+  stats <- c(
+    mean(x),
+    sd(x),
+    quantile(x, probs[1]),
+    quantile(x, probs[2]),
+    quantile(x, probs[3]),
+    quantile(x, probs[4]),
+    mean(x[x > quantile(x, var_prob)])   # TVaR at var_prob
+  )
+  names(stats) <- c("Mean", "SD", "VaR_95", "VaR_99", "VaR_99.5", "VaR_99.9", paste0("TVaR_", var_prob*100))
+  return(stats)
+}
+# ---- 10‑year simulation ----
+T <- 10
+n_sim <- 100000
+set.seed(123)  # optional: use same seed for consistency
+pb <- txtProgressBar(min = 0, max = n_sim, style = 3)
+pv_loss_10y <- numeric(n_sim)
+for (i in 1:n_sim) {
+  total_pv <- 0
+  for (t in 1:T) {
+    N <- rpois(1, total_expected)
+    if (N > 0) {
+      cells <- sample(1:nrow(exposure_df), size = N, replace = TRUE, prob = exposure_df$prob)
+      sev <- rlnorm(N, meanlog = exposure_df$meanlog[cells], sdlog = sdlog)
+      sev <- sev * (1 + avg_inflation)^t
+      disc <- 1 / (1 + spot_rates[min(t, max_year)])^t   # use spot rate for the year; beyond max_year use last rate
+      total_pv <- total_pv + sum(sev * disc)
+    }
+  }
+  if (i %% 100 == 0) setTxtProgressBar(pb, i)
+
+close(pb)
+  pv_loss_10y[i] <- total_pv
+}
+
+# Present value of premium stream for 10 years (annual premium paid at start of each year)
+# For year 1 (t=0): discount factor = 1
+# For year 2 (t=1): discount factor = 1/(1+spot_rates[1])
+# For year 3 (t=2): discount factor = 1/(1+spot_rates[2])^2, etc.
+disc_premium <- c(1, 1 / (1 + spot_rates[1:(T-1)])^(1:(T-1)))
+pv_premium_10y <- sum(premium_annual * disc_premium)
+net_revenue_10y <- pv_premium_10y - pv_loss_10y
+
+#### SUMMARY STATISTICS
+# --- Create loss and net revenue tables as data frames ---
+loss_table <- data.frame(
+  Horizon = c("1 year", "5 years", "10 years"),
+  Mean = c(loss_1y["Mean"], loss_5y["Mean"], loss_10y["Mean"]),
+  SD = c(loss_1y["SD"], loss_5y["SD"], loss_10y["SD"]),
+  VaR_95 = c(loss_1y["VaR_95"], loss_5y["VaR_95"], loss_10y["VaR_95"]),
+  VaR_99 = c(loss_1y["VaR_99"], loss_5y["VaR_99"], loss_10y["VaR_99"]),
+  VaR_99.5 = c(loss_1y["VaR_99.5"], loss_5y["VaR_99.5"], loss_10y["VaR_99.5"]),
+  VaR_99.9 = c(loss_1y["VaR_99.9"], loss_5y["VaR_99.9"], loss_10y["VaR_99.9"]),
+  TVaR_99 = c(loss_1y["TVaR_99"], loss_5y["TVaR_99"], loss_10y["TVaR_99"]),
+  stringsAsFactors = FALSE
+)
+
+nr_table <- data.frame(
+  Horizon = c("1 year", "5 years", "10 years"),
+  Mean = c(nr_1y["Mean"], nr_5y["Mean"], nr_10y["Mean"]),
+  SD = c(nr_1y["SD"], nr_5y["SD"], nr_10y["SD"]),
+  Prob_Negative = c(nr_1y["Prob_Negative"], nr_5y["Prob_Negative"], nr_10y["Prob_Negative"]),
+  stringsAsFactors = FALSE
+)
+
+# --- Print tables with formatting ---
+cat("\n=== Present Value of Aggregate Losses (Đ million) ===\n")
+print(round(loss_table[, c("Mean", "SD", "VaR_95", "VaR_99", "VaR_99.5", "VaR_99.9", "TVaR_99")], 2),
+      row.names = FALSE)
+
+cat("\n=== Net Revenue (Present Value, Đ million) ===\n")
+print(round(nr_table[, c("Mean", "SD", "Prob_Negative")], 2),
+      row.names = FALSE)
+
+# Optionally, also display the full tables with horizon
+cat("\nFull loss table:\n")
+print(loss_table)
+
+cat("\nFull net revenue table:\n")
+print(nr_table)
+
+###GIGGLYGOO
+# ---- Loss summary table ----
+loss_table <- data.frame(
+  Horizon = c("1 year", "5 years", "10 years"),
+  Mean = c(mean(pv_agg_loss_1y), mean(pv_loss_5y), mean(pv_loss_10y)),
+  SD = c(sd(pv_agg_loss_1y), sd(pv_loss_5y), sd(pv_loss_10y)),
+  VaR_95 = c(quantile(pv_agg_loss_1y, 0.95), quantile(pv_loss_5y, 0.95), quantile(pv_loss_10y, 0.95)),
+  VaR_99 = c(quantile(pv_agg_loss_1y, 0.99), quantile(pv_loss_5y, 0.99), quantile(pv_loss_10y, 0.99)),
+  VaR_99.5 = c(quantile(pv_agg_loss_1y, 0.995), quantile(pv_loss_5y, 0.995), quantile(pv_loss_10y, 0.995)),
+  VaR_99.9 = c(quantile(pv_agg_loss_1y, 0.999), quantile(pv_loss_5y, 0.999), quantile(pv_loss_10y, 0.999)),
+  TVaR_99 = c(
+    mean(pv_agg_loss_1y[pv_agg_loss_1y > quantile(pv_agg_loss_1y, 0.99)]),
+    mean(pv_loss_5y[pv_loss_5y > quantile(pv_loss_5y, 0.99)]),
+    mean(pv_loss_10y[pv_loss_10y > quantile(pv_loss_10y, 0.99)])
+  ),
+  stringsAsFactors = FALSE
+)
+
+# ---- Net revenue summary table ----
+nr_table <- data.frame(
+  Horizon = c("1 year", "5 years", "10 years"),
+  Mean = c(mean(net_revenue_1y), mean(net_revenue_5y), mean(net_revenue_10y)),
+  SD = c(sd(net_revenue_1y), sd(net_revenue_5y), sd(net_revenue_10y)),
+  Prob_Negative = c(mean(net_revenue_1y < 0), mean(net_revenue_5y < 0), mean(net_revenue_10y < 0)),
+  stringsAsFactors = FALSE
+)
+show(loss_table)
+show(nr_table)
+```
+```{r}
+# ---- Stress testing function ----
+# Parameters:
+#   freq_mult: multiplier for total expected claims (default = 1)
+#   sev_mult:  multiplier for severity (default = 1)
+#   n_sim:     number of simulations (default = 100000)
+# Returns a named vector with mean, sd, VaR_99, TVaR_99
+stress_test <- function(freq_mult = 1, sev_mult = 1, n_sim = 100000) {
+  # Adjust total expected claims and severity parameters
+  stressed_lambda <- total_expected * freq_mult
+  stressed_meanlog <- exposure_df$meanlog + log(sev_mult)   # because log(c*X) = log(c) + log(X)
+  # sdlog remains unchanged
+  
+  set.seed(123)   # ensure reproducibility (optional: use same seed across scenarios)
+  agg_loss <- numeric(n_sim)
+  pb <- txtProgressBar(min = 0, max = n_sim, style = 3)
+  for (i in 1:n_sim) {
+    N <- rpois(1, stressed_lambda)
+    if (N == 0) {
+      agg_loss[i] <- 0
+    } else {
+      cells <- sample(1:nrow(exposure_df), size = N, replace = TRUE, prob = exposure_df$prob)
+      sev <- rlnorm(N, meanlog = stressed_meanlog[cells], sdlog = sdlog)
+      agg_loss[i] <- sum(sev)
+    }
+  }
+  if (i %% 100 == 0) setTxtProgressBar(pb, i)
+
+close(pb)
+  # Apply inflation and discounting (same as 1‑year base)
+  pv_loss <- agg_loss * (1 + avg_inflation) / (1 + spot_rates[1])
+  
+  # Compute statistics
+  c(
+    Mean = mean(pv_loss),
+    SD = sd(pv_loss),
+    VaR_99 = quantile(pv_loss, 0.99),
+    TVaR_99 = mean(pv_loss[pv_loss > quantile(pv_loss, 0.99)])
+  )
+}
+
+# ---- Run stress scenarios ----
+scenarios <- list(
+  Base = c(freq_mult = 1, sev_mult = 1),
+  "+50% Frequency" = c(freq_mult = 1.5, sev_mult = 1),
+  "+50% Severity" = c(freq_mult = 1, sev_mult = 1.5),
+  "Combined (+50% each)" = c(freq_mult = 1.5, sev_mult = 1.5),
+  "Catastrophic (2x each)" = c(freq_mult = 2, sev_mult = 2)
+)
+
+results <- data.frame(
+  Scenario = names(scenarios),
+  t(sapply(scenarios, function(params) {
+    stress_test(freq_mult = params["freq_mult"], sev_mult = params["sev_mult"])
+  }))
+)
+
+# ---- Print the table (rounded) ----
+cat("\n=== Stress Testing Results (1‑year Present Value Losses, Đ million) ===\n")
+print(round(results[, -1], 2), row.names = FALSE)
+
+
+
+
+
+
+
+
+```
+```{r}
+# --- 1. Set annual premium to VaR_95 of the 1‑year undiscounted loss ---
+premium_annual <- quantile(agg_loss, 0.95)   # from earlier simulation
+
+# --- 2. Present value of premium for each horizon ---
+# 1‑year: premium paid at inception → PV = premium_annual
+premium_pv_1y <- premium_annual
+
+# 5‑year: premium paid at start of each year
+T5 <- 5
+disc_premium_5y <- c(1, 1 / (1 + spot_rates[1:(T5-1)])^(1:(T5-1)))
+premium_pv_5y <- sum(premium_annual * disc_premium_5y)
+
+# 10‑year
+T10 <- 10
+disc_premium_10y <- c(1, 1 / (1 + spot_rates[1:(T10-1)])^(1:(T10-1)))
+premium_pv_10y <- sum(premium_annual * disc_premium_10y)
+
+# --- 3. Net revenue = premium PV – loss PV (already computed as pv_agg_loss_1y, pv_loss_5y, pv_loss_10y) ---
+net_revenue_1y <- premium_pv_1y - pv_agg_loss_1y
+net_revenue_5y <- premium_pv_5y - pv_loss_5y
+net_revenue_10y <- premium_pv_10y - pv_loss_10y
+
+# --- 4. Summary statistics ---
+# Costs table (losses)
+costs_table <- data.frame(
+  Horizon = c("1 year", "5 years", "10 years"),
+  Mean = c(mean(pv_agg_loss_1y), mean(pv_loss_5y), mean(pv_loss_10y)),
+  SD = c(sd(pv_agg_loss_1y), sd(pv_loss_5y), sd(pv_loss_10y)),
+  VaR_99 = c(quantile(pv_agg_loss_1y, 0.99), quantile(pv_loss_5y, 0.99), quantile(pv_loss_10y, 0.99)),
+  TVaR_99 = c(
+    mean(pv_agg_loss_1y[pv_agg_loss_1y > quantile(pv_agg_loss_1y, 0.99)]),
+    mean(pv_loss_5y[pv_loss_5y > quantile(pv_loss_5y, 0.99)]),
+    mean(pv_loss_10y[pv_loss_10y > quantile(pv_loss_10y, 0.99)])
+  )
+)
+
+# Returns table (premium present value, deterministic)
+returns_table <- data.frame(
+  Horizon = c("1 year", "5 years", "10 years"),
+  PV_Premium = c(premium_pv_1y, premium_pv_5y, premium_pv_10y)
+)
+
+# Net revenue table (including tail measures) – direct calculation
+nr_table <- data.frame(
+  Horizon = c("1 year", "5 years", "10 years"),
+  Mean = c(mean(net_revenue_1y), mean(net_revenue_5y), mean(net_revenue_10y)),
+  SD = c(sd(net_revenue_1y), sd(net_revenue_5y), sd(net_revenue_10y)),
+  Prob_Negative = c(mean(net_revenue_1y < 0), mean(net_revenue_5y < 0), mean(net_revenue_10y < 0)),
+  VaR_99_Left = c(
+    quantile(net_revenue_1y, 0.01),
+    quantile(net_revenue_5y, 0.01),
+    quantile(net_revenue_10y, 0.01)
+  ),
+  TVaR_99_Left = c(
+    mean(net_revenue_1y[net_revenue_1y < quantile(net_revenue_1y, 0.01)]),
+    mean(net_revenue_5y[net_revenue_5y < quantile(net_revenue_5y, 0.01)]),
+    mean(net_revenue_10y[net_revenue_10y < quantile(net_revenue_10y, 0.01)])
+  )
+)
+
+# --- 5. Print tables (rounded, safely handling non‑numeric columns) ---
+print_rounded <- function(df, digits = 2) {
+  df_rounded <- df
+  num_cols <- sapply(df_rounded, is.numeric)
+  if (any(num_cols)) {
+    df_rounded[, num_cols] <- round(df_rounded[, num_cols], digits)
+  }
+  print(df_rounded, row.names = FALSE)
+}
+
+cat("\n=== Costs (Present Value of Aggregate Losses, Đ million) ===\n")
+print_rounded(costs_table)
+
+cat("\n=== Returns (Present Value of Premium, Đ million) ===\n")
+print_rounded(returns_table)
+
+cat("\n=== Net Revenue (Present Value, Đ million) ===\n")
+print_rounded(nr_table)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+## Risk Identification
+# ---- 1. Compute expected loss per cell ----
+# Expected severity = exp(meanlog + 0.5 * sdlog^2)
+exposure_df$expected_severity <- exp(exposure_df$meanlog + 0.5 * exposure_df$sdlog^2)
+
+# Expected total loss = exposure * lambda * expected_severity
+exposure_df$expected_loss <- exposure_df$exposure * exposure_df$lambda * exposure_df$expected_severity
+
+# ---- 2. Create a threat table sorted by expected loss ----
+# Use dplyr::select to avoid conflicts
+threat_table <- exposure_df %>%
+  dplyr::select(solar_system2, equipment_type2, age_band, exposure, lambda, expected_severity, expected_loss) %>%
+  dplyr::arrange(desc(expected_loss))
+
+# ---- 3. Display top threats overall ----
+cat("\n=== Top 10 Threats (Overall) ===\n")
+print(head(threat_table, 10))
+
+# ---- 4. Top threats by solar system ----
+cat("\n=== Top 5 Threats per Solar System ===\n")
+threat_by_system <- threat_table %>%
+  group_by(solar_system2) %>%
+  slice_max(order_by = expected_loss, n = 5) %>%
+  ungroup() %>%
+  arrange(solar_system2, desc(expected_loss))
+
+print(threat_by_system)
+
+## Grouped
+# ---- Summary by solar system ----
+summary_by_system <- exposure_df %>%
+  group_by(solar_system2) %>%
+  summarise(
+    Total_Expected_Loss = sum(expected_loss),
+    Total_Exposure = sum(exposure),
+    # Top equipment type (by total expected loss)
+    Top_Equipment = equipment_type2[which.max(expected_loss)],
+    # Dominant age band (by total expected loss)
+    Dominant_Age = age_band[which.max(expected_loss)]
+  ) %>%
+  ungroup()
+
+# Print summary
+print(summary_by_system)
+
+```
+
+```{r}
+
+##Product Design- Determining a deductible
+  
+## Product Design - Determining a deductible
+
+# ---- 1. Load historical severity data ----
+# Assume Severity data frame exists with columns: claim_amount, solar_system2 (cleaned)
+sev_pos <- Severity[Severity$claim_amount > 0, ]
+
+# ---- Remove rows with NA in solar_system2 ----
+sev_pos <- sev_pos[!is.na(sev_pos$solar_system2), ]
+
+# ---- 2. Define systems and percentiles ----
+systems <- c("Helionis Cluster", "Epsilon", "Zeta")
+pct <- c(0.10, 0.20, 0.25, 0.30, 0.50, 0.75, 0.90, 0.95, 0.99)
+
+# ---- 3. Compute percentiles per system ----
+quantiles_by_system <- lapply(systems, function(sys) {
+  claims <- sev_pos$claim_amount[sev_pos$solar_system2 == sys]
+  if(length(claims) == 0) return(rep(NA, length(pct)))
+  quantile(claims, probs = pct, na.rm = TRUE)
+})
+names(quantiles_by_system) <- systems
+
+# ---- 4. Display percentiles table ----
+quantiles_df <- data.frame(
+  Percentile = pct,
+  Helionis_Cluster = quantiles_by_system[["Helionis Cluster"]],
+  Epsilon = quantiles_by_system[["Epsilon"]],
+  Zeta = quantiles_by_system[["Zeta"]]
+)
+
+cat("\n=== Claim Amount Percentiles by Solar System (Đ) ===\n")
+print(round(quantiles_df, 0))
+
+# ---- 5. Propose deductibles as the 20th percentile ----
+deductibles <- data.frame(
+  solar_system2 = systems,
+  deductible = c(quantiles_by_system[["Helionis Cluster"]]["20%"],
+                 quantiles_by_system[["Epsilon"]]["20%"],
+                 quantiles_by_system[["Zeta"]]["20%"])
+)
+
+cat("\n=== Proposed Per‑Claim Deductibles by Solar System (20th percentile) ===\n")
+print(deductibles)
+
+# ---- 6. Visualise the three distributions ----
+library(ggplot2)
+ggplot(sev_pos, aes(x = claim_amount, fill = solar_system2)) +
+  geom_histogram(bins = 50, alpha = 0.6, position = "identity") +
+  facet_wrap(~ solar_system2, scales = "free") +   # <-- corrected facet variable
+  geom_vline(data = deductibles, aes(xintercept = deductible), color = "red", linetype = "dashed") +
+  labs(title = "Historical Claim Severity Distributions by Solar System",
+       x = "Claim Amount (Đ)", y = "Frequency") +
+  theme_minimal()
+
+ggplot(sev_pos, aes(x = claim_amount, color = solar_system2, fill = solar_system2)) +
+  geom_density(alpha = 0.3, adjust = 1.5) +
+  geom_vline(data = deductibles, aes(xintercept = deductible, color = solar_system2),
+             linetype = "dashed", size = 0.8) +
+  labs(title = "Claim Severity Distributions by Solar System",
+       x = "Claim Amount (Đ)", y = "Density") +
+  scale_color_manual(values = c("Helionis Cluster" = "blue", "Epsilon" = "red", "Zeta" = "green")) +
+  scale_fill_manual(values = c("Helionis Cluster" = "blue", "Epsilon" = "red", "Zeta" = "green")) +
+  theme_minimal() +
+  xlim(0, quantile(sev_pos$claim_amount, 0.99))   # zoom to 99th percentile for readability
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# ---- 1. Prepare historical data per system ----
+sev_pos <- Severity[Severity$claim_amount > 0 & !is.na(Severity$solar_system2), ]
+systems <- c("Helionis Cluster", "Epsilon", "Zeta")
+
+# ---- 2. Empirical LER function ----
+empirical_LER <- function(claims, deductible) {
+  if (deductible <= 0) return(0)
+  mean_claims <- mean(claims)
+  limited_mean <- mean(pmin(claims, deductible))
+  limited_mean / mean_claims
+}
+
+# ---- 3. Compute LER curves up to 2 million ----
+d_range <- seq(0, 2e6, by = 50000)
+ler_data <- data.frame()
+
+for (sys in systems) {
+  claims <- sev_pos$claim_amount[sev_pos$solar_system2 == sys]
+  if (length(claims) > 0) {
+    for (d in d_range) {
+      LER <- empirical_LER(claims, d)
+      ler_data <- rbind(ler_data, data.frame(system = sys, deductible = d, LER = LER))
+    }
+  }
+}
+
+# ---- 4. Compute marginal reduction (ΔLER per million Đ) ----
+marginal_data <- ler_data %>%
+  group_by(system) %>%
+  arrange(deductible) %>%
+  mutate(
+    delta_LER = LER - lag(LER),
+    delta_d = deductible - lag(deductible),
+    marginal_per_million = delta_LER / (delta_d / 1e6)
+  ) %>%
+  ungroup()
+
+# ---- 5. Proposed deductibles ----
+proposed <- data.frame(
+  system = systems,
+  deductible = c(1e6, 1.5e6, 2e6)
+)
+
+proposed$LER <- NA
+for (i in 1:nrow(proposed)) {
+  sys <- proposed$system[i]
+  d <- proposed$deductible[i]
+  claims <- sev_pos$claim_amount[sev_pos$solar_system2 == sys]
+  if (length(claims) > 0) {
+    proposed$LER[i] <- empirical_LER(claims, d)
+  }
+}
+
+# Get marginal values at proposed deductibles
+marginal_proposed <- marginal_data %>%
+  semi_join(proposed, by = c("system", "deductible")) %>%
+  select(system, deductible, marginal_per_million)
+
+# ---- 6. Plots ----
+# LER plot
+p1 <- ggplot(ler_data, aes(x = deductible / 1e6, y = LER, color = system, group = system)) +
+  geom_line(size = 1.2) +
+  geom_point(data = proposed, aes(x = deductible / 1e6, y = LER), size = 3, shape = 18) +
+  geom_text(data = proposed, aes(label = paste0(round(LER*100,1), "%")),
+            vjust = -1, hjust = -0.2, size = 4) +
+  labs(title = "Loss Elimination Ratio",
+       x = "Deductible (Đ million)", y = "Proportion of Expected Loss Eliminated") +
+  scale_color_manual(values = c("Helionis Cluster" = "blue", "Epsilon" = "red", "Zeta" = "green")) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 2)) +
+  scale_y_continuous(labels = scales::percent)
+
+# Marginal reduction plot
+p2 <- ggplot(marginal_data, aes(x = deductible / 1e6, y = marginal_per_million, color = system, group = system)) +
+  geom_line(size = 1.2) +
+  geom_point(data = marginal_proposed, aes(x = deductible / 1e6, y = marginal_per_million), size = 3, shape = 18) +
+  geom_text(data = marginal_proposed, aes(label = paste0(round(marginal_per_million, 3), " %/MĐ")),
+            vjust = -1, hjust = -0.2, size = 3) +
+  labs(title = "Marginal Reduction in Expected Loss",
+       x = "Deductible (Đ million)", y = "Percentage point reduction per Đ1M increase") +
+  scale_color_manual(values = c("Helionis Cluster" = "blue", "Epsilon" = "red", "Zeta" = "green")) +
+  theme_minimal() +
+  scale_x_continuous(limits = c(0, 2)) +
+  geom_hline(yintercept = 1, linetype = "dashed", alpha = 0.5) +
+  annotate("text", x = 1.8, y = 1.1, label = "Flattening region", size = 3)
+
+# Display plots (you can run them one after the other, or use gridExtra if you want them side by side)
+print(p1)
+print(p2)
+
+# ---- Choose your step size (in Đ) ----
+step <- 100000   # 100,000 Đ
+threshold <- 0.1  # percent per 100,000 Đ
+
+# ---- Recompute d_range with the chosen step ----
+d_range <- seq(0, 2e6, by = step)
+
+# (Re‑run the LER calculation with the new d_range, then compute marginal per step)
+marginal_data <- ler_data %>%
+  group_by(system) %>%
+  arrange(deductible) %>%
+  mutate(
+    delta_LER = LER - lag(LER),
+    delta_d = deductible - lag(deductible),
+    marginal_per_step = delta_LER / (delta_d / step)   # percentage point per step unit
+  ) %>%
+  ungroup()
+
+# Find where marginal drops below threshold
+flattening_points <- marginal_data %>%
+  filter(!is.na(marginal_per_step)) %>%
+  group_by(system) %>%
+  filter(marginal_per_step <= threshold) %>%
+  slice(1) %>%
+  select(system, deductible, marginal_per_step)
+
+print(flattening_points)
+
+```
+
+```{r}
+
+# Corrected LER function: proportion of expected loss eliminated by deductible
+eliminated_proportion <- function(claims, deductible) {
+  if (deductible <= 0) return(0)
+  mean_claims <- mean(claims)
+  limited_mean <- mean(pmin(claims, deductible))
+  1 - limited_mean / mean_claims
+}
+
+# Compute at flattening points
+flattening <- data.frame(
+  system = c("Helionis Cluster", "Epsilon", "Zeta"),
+  deductible = c(200000, 200000, 250000)
+)
+flattening$LER <- mapply(function(s, d) {
+  claims <- sev_pos$claim_amount[sev_pos$solar_system2 == s]
+  eliminated_proportion(claims, d)
+}, flattening$system, flattening$deductible)
+
+# Show results
+print(flattening)
+
+```
+
+
+
+
+```{r}
+# ---- 1. Per‑occurrence limit (based on historical severity) ----
+# Use the 99th percentile of all positive claim amounts
+sev_all <- Severity$claim_amount[Severity$claim_amount > 0]
+per_occ_limit <- quantile(sev_all, 0.99, na.rm = TRUE)
+cat("Recommended per‑occurrence limit (99th percentile): Đ", round(per_occ_limit, 0), "\n")
+
+# ---- 2. Aggregate annual limit (based on simulation with deductibles) ----
+# Re‑run the simulation with the chosen deductibles (system‑specific)
+# We already have exposure_df with lambda, meanlog, sdlog, and deductibles per system
+# We need to simulate paid losses: for each claim, paid = max(0, severity - deductible)
+
+# Set deductibles per system (from earlier analysis)
+deductible_df <- data.frame(
+  solar_system2 = c("Helionis Cluster", "Epsilon", "Zeta"),
+  deductible = c(200000, 200000, 250000)
+)
+exposure_df <- exposure_df %>% left_join(deductible_df, by = "solar_system2")
+
+# Simulation parameters
+n_sim <- 10000
+total_expected <- sum(exposure_df$exposure * exposure_df$lambda)
+cell_probs <- (exposure_df$exposure * exposure_df$lambda) / total_expected
+
+set.seed(123)
+paid_loss <- numeric(n_sim)
+
+for (i in 1:n_sim) {
+  N <- rpois(1, total_expected)
+  if (N == 0) {
+    paid_loss[i] <- 0
+  } else {
+    cells <- sample(1:nrow(exposure_df), size = N, replace = TRUE, prob = cell_probs)
+    sev <- rlnorm(N, meanlog = exposure_df$meanlog[cells], sdlog = exposure_df$sdlog[cells])
+    deduct <- exposure_df$deductible[cells]
+    paid <- pmax(sev - deduct, 0)
+    # Apply per‑occurrence limit (if any claim exceeds the limit, cap it)
+    # For now, we don't apply a per‑occurrence limit in this simulation;
+    # we will later cap at the chosen limit.
+    paid_loss[i] <- sum(paid)
+  }
+}
+
+# Now choose aggregate limit as a high percentile of the paid loss distribution
+agg_limit <- quantile(paid_loss, 0.995)   # 99.5th percentile
+cat("Recommended aggregate annual limit (99.5% VaR of paid losses): Đ", round(agg_limit, 0), "\n")
+
+# Optionally, you can also compute the 99.9th percentile for a more conservative limit
+agg_limit_extreme <- quantile(paid_loss, 0.999)
+cat("Extreme aggregate limit (99.9% VaR): Đ", round(agg_limit_extreme, 0), "\n")
+
+```
