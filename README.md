@@ -23,7 +23,7 @@
 
 Please find all code here:
 - Equipment Failure: [Equipment Failure Code](https://github.com/Actuarial-Control-Cycle-T1-2026/group-page-showcase-stellar-risk-analytics/blob/main/ACTL4001%20Equipment%20Failure.Rmd)
-- Workers Compensation: [Workers Compensation Code] (insert link in here)
+- Workers Compensation: [Workers Compensation Code] (https://github.com/Actuarial-Control-Cycle-T1-2026/group-page-showcase-stellar-risk-analytics/blob/main/ACTL4001%20Assignment.R)
 - Business Interruption: [Business Interruption Code] (insert link in here)
 - Cargo Loss: [Cargo Loss Code] (insert link in here)
 
