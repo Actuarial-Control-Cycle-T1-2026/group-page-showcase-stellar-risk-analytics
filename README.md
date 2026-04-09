@@ -22,7 +22,7 @@
 - [6.0 Data and Data Limitations](#60-data-and-data-limitations)
 
 Please find all code here:
-- Equipment Failure: [Equipment Failure Code](ACTL4001_Equipment_Failure.rmd)
+- Equipment Failure: [Equipment Failure Code](ACTL4001 Equipment Failure.Rmd)
 
 # 1.0	EXECUTIVE SUMMARY
 Stellar Risk Analytics recommends the following comprehensive products for Cosmic Quarry Mining Corporation’s (CQMC) equipment failure, workers compensation, business interruption and cargo loss hazards. The analysis is based on the operational characteristics of the Helionis Cluster, Bayesia System and Oryn Delta solar systems and performed on a 100,000 monte carlo simulation across all operational sectors.
