@@ -1,0 +1,230 @@
+### Insert Required Packages and Data 
+
+library(readxl)
+library(dplyr)
+library(MASS)
+library(fitdistrplus)
+
+set.seed(12345)
+
+
+cargo_claims_severity <- read_excel("cargo claims severity.xlsx")
+cargo_claims_freq     <- read_excel("cargo claims freq.xlsx")
+
+cargo_freq <- cargo_claims_freq %>%
+  mutate(
+    cargo_type     = as.factor(cargo_type),
+    container_type = as.factor(container_type),
+    route_risk     = as.factor(route_risk),
+    exposure       = pmax(exposure, 1e-6),
+    claim_count    = as.integer(claim_count)
+  )
+
+cargo_sev <- cargo_claims_severity %>%
+  mutate(
+    cargo_type     = as.factor(cargo_type),
+    container_type = as.factor(container_type),
+    route_risk     = as.factor(route_risk),
+    exposure       = pmax(exposure, 1e-6),
+    claim_amount   = as.numeric(claim_amount)
+  ) %>%
+  filter(!is.na(claim_amount), claim_amount > 0)
+
+### Generat Summary Statistics
+freq_stats <- cargo_freq %>%
+  summarise(
+    mean_claim_count = mean(claim_count),
+    var_claim_count  = var(claim_count),
+    total_claims     = sum(claim_count),
+    total_exposure   = sum(exposure)
+  )
+
+sev_stats <- cargo_sev %>%
+  summarise(
+    mean_claim_severity   = mean(claim_amount),
+    median_claim_severity = median(claim_amount),
+    var_claim_severity    = var(claim_amount),
+    p95_claim             = quantile(claim_amount, 0.95),
+    p99_claim             = quantile(claim_amount, 0.99),
+    total_claims_obs      = n()
+  )
+
+print(freq_diag)
+print(sev_diag)
+
+### Create Baseline Deductible
+
+base_deductible <- 0.10 * mean(cargo_sev$claim_amount)
+print(base_deductible)
+
+### Model Claims Frquency 
+freq_model <- glm(
+  claim_count ~ cargo_type + cargo_value + weight + route_risk + distance +
+    transit_duration + pilot_experience + vessel_age + container_type +
+    solar_radiation + debris_density + offset(log(exposure)),
+  family = poisson(link = "log"),
+  data = cargo_freq
+)
+
+print(summary(freq_model))
+
+lambda_sum <- sum(predict(freq_model, type = "response"))
+print(lambda_sum)
+
+print(coef(summary(freq_pois)))
+
+solar_coef <- coef(freq_pois)["solar_radiation"]
+solar_loading_factor <- exp(solar_coef)
+
+print(solar_coef)
+print(solar_loading_factor)
+
+### Fit a severity model
+
+sev_model <- fitdist(cargo_sev$claim_amount, "lnorm")
+print(summary(sev_model))
+
+mu    <- unname(sev_lnorm$estimate["meanlog"])
+sigma <- unname(sev_lnorm$estimate["sdlog"])
+sigma2 <- sigma^2
+
+print(mu)
+print(sigma)
+print(sigma2)
+
+
+sev_glm_gamma <- glm(
+  claim_amount ~ cargo_type + cargo_value + weight + route_risk + distance +
+    transit_duration + pilot_experience + vessel_age + container_type +
+    solar_radiation + debris_density,
+  family = Gamma(link = "log"),
+  data = cargo_sev
+)
+
+print(summary(sev_glm_gamma))
+print(coef(sev_glm_gamma))
+
+### Compute Tail Metrics 
+
+r_sev <- function(n, mu, sigma) {
+  if (n <= 0) return(numeric(0))
+  rlnorm(n, meanlog = mu, sdlog = sigma)
+}
+
+tail_metrics <- function(x) {
+  VaR_95  <- unname(quantile(x, 0.95))
+  TVaR_95 <- mean(x[x >= VaR_95])
+  VaR_99  <- unname(quantile(x, 0.99))
+  TVaR_99 <- mean(x[x >= VaR_99])
+  
+  data.frame(
+    Mean = mean(x),
+    Standard_Deviation = sd(x),
+    P95 = VaR_95,
+    P99 = VaR_99,
+    VaR_95 = VaR_95,
+    TVaR_95 = TVaR_95,
+    VaR_99 = VaR_99,
+    TVaR_99 = TVaR_99
+  )
+}
+
+### Generate 1 and 5 year Monte Carlo Simulations
+
+n_sims <- 100000
+one_yr_loss_sim <- numeric(n_sims)
+
+for (i in 1:n_sims) {
+  N <- rpois(1, lambda = lambda_total)
+  one_yr_loss_sim[i] <- sum(r_severity(N, mu, sigma))
+}
+
+one_yr_sim_results <- tail_metrics(sim_1yr_loss)
+print(one_yr_sim_results)
+
+annual_exposure_growth    <- 0.018
+annual_sev_inflation <- 0.029
+
+five_yr_loss_sim <- numeric(n_sims)
+
+for (i in 1:n_sims) {
+  total_loss <- 0
+  
+  for (yr in 1:5) {
+    lambda_yr <- lambda_total * (1 + annual_exposure_growth)^(yr - 1)
+    sev_mult  <- (1 + annual_severity_inflation)^(yr - 1)
+    
+    N <- rpois(1, lambda = lambda_yr)
+    total_loss <- total_loss + sum(r_severity(N, mu, sigma) * sev_mult)
+  }
+  
+  five_yr_loss_sim[i] <- total_loss
+}
+
+five_yr_sim_results <- tail_metrics(five_yr_loss_sim)
+print(five_yr_sim_results)
+
+### Calculate Premiums 
+profit_margin <- 0.10
+expense_ratio <- 0.15
+
+pred_annual_loss <- mean(sim_1yr_loss)
+premium <- expected_annual_loss * (1 + profit_margin) / (1 - expense_ratio)
+
+print(pred_annual_loss)
+print(premium)
+
+
+### Compute Capital Requirments
+
+capital_1yr_var  <- as.numeric(quantile(one_yr_loss_sim, 0.99) - mean(one_yr_loss_sim))
+capital_1yr_tvar <- mean(one_yr_loss_sim[one_yr_loss_sim >= quantile(one_yr_loss_sim, 0.99)]) - mean(one_yr_loss_sim)
+
+capital_5yr_var  <- as.numeric(quantile(five_yr_loss_sim, 0.99) - mean(five_yr_loss_sim))
+capital_5yr_tvar <- mean(five_yr_loss_sim[five_yr_loss_sim >= quantile(five_yr_loss_sim, 0.99)]) - mean(five_yr_loss_sim)
+
+capital_table <- data.frame(
+  Capital_Measure = c("VaR (1 year)", "TVaR (1 year)", "VaR (5 years)", "TVaR (5 years)"),
+  Capital_Requirement = c(capital_1yr_var, capital_1yr_tvar, capital_5yr_var, capital_5yr_tvar)
+)
+
+print(capital_table)
+
+print(capital_table)
+
+### Scenario/Stress Tests
+run_stress <- function(freq_mult = 1, sev_mult = 1, n_sims = 100000) {
+  stressed_losses <- numeric(n_sims)
+  
+  for (i in 1:n_sims) {
+    N <- rpois(1, lambda = lambda_total * freq_mult)
+    stressed_losses[i] <- sum(r_severity(N, mu, sigma) * sev_mult)
+  }
+  
+  c(
+    Mean = mean(stressed_losses),
+    SD = sd(stressed_losses),
+    VaR99 = unname(quantile(stressed_losses, 0.99)),
+    TVaR99 = mean(stressed_losses[stressed_losses >= quantile(stressed_losses, 0.99)])
+  )
+}
+
+baseline <- run_stress(1.0, 1.0)
+freq_50  <- run_stress(1.5, 1.0)
+sev_50   <- run_stress(1.0, 1.5)
+both_50  <- run_stress(1.5, 1.5)
+both_200 <- run_stress(3.0, 3.0)
+
+scenario_table <- rbind(
+  Baseline = baseline,
+  `+50% Frequency` = freq_50,
+  `+50% Severity` = sev_50,
+  `Frequency & Severity (+50%)` = both_50,
+  `Frequency & Severity (+200%)` = both_200
+)
+
+scenario_table <- as.data.frame(scenario_table)
+scenario_table$Increase_in_VaR99  <- (scenario_table$VaR99 / scenario_table["Baseline", "VaR99"] - 1) * 100
+scenario_table$Increase_in_TVaR99 <- (scenario_table$TVaR99 / scenario_table["Baseline", "TVaR99"] - 1) * 100
+
+print(scenario_table)
