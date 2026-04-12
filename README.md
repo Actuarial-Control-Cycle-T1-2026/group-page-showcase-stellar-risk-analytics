@@ -22,6 +22,7 @@
 - [6.0 Data and Data Limitations](#60-data-and-data-limitations)
 
 Team Members: Kieren Chan, Erik Cen, Patrick Youssef, Emily Chong, Sarah Xie
+
 Please find all code here:
 - Equipment Failure: [Equipment Failure Code](https://github.com/Actuarial-Control-Cycle-T1-2026/group-page-showcase-stellar-risk-analytics/blob/main/ACTL4001%20Equipment%20Failure.Rmd)
 - Workers Compensation: [Workers Compensation Code](https://github.com/Actuarial-Control-Cycle-T1-2026/group-page-showcase-stellar-risk-analytics/blob/main/ACTL4001%20Assignment.R)
