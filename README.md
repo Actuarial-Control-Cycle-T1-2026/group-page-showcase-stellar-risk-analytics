@@ -27,7 +27,7 @@ Please find all code here:
 - Equipment Failure: [Equipment Failure Code](https://github.com/Actuarial-Control-Cycle-T1-2026/group-page-showcase-stellar-risk-analytics/blob/main/ACTL4001%20Equipment%20Failure.Rmd)
 - Workers Compensation: [Workers Compensation Code](https://github.com/Actuarial-Control-Cycle-T1-2026/group-page-showcase-stellar-risk-analytics/blob/main/ACTL4001%20Assignment.R)
 - Business Interruption: [Business Interruption Code](https://github.com/Actuarial-Control-Cycle-T1-2026/group-page-showcase-stellar-risk-analytics/blob/main/BusinessInterruptions.R)
-- Cargo Loss: [Cargo Loss Code](insert link in here)
+- Cargo Loss: [Cargo Loss Code](https://github.com/Actuarial-Control-Cycle-T1-2026/group-page-showcase-stellar-risk-analytics/blob/main/Cargo%20Loss%20Code)
 
 # 1.0	EXECUTIVE SUMMARY
 Stellar Risk Analytics recommends the following comprehensive products for Cosmic Quarry Mining Corporation’s (CQMC) equipment failure, workers compensation, business interruption and cargo loss hazards. The analysis is based on the operational characteristics of the Helionis Cluster, Bayesia System and Oryn Delta solar systems and performed on a 100,000 monte carlo simulation across all operational sectors.
